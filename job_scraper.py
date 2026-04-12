@@ -279,85 +279,145 @@ def scrape_ibps():
 # ═════════════════════════════════════════════════════════════════
 
 def scrape_naukri():
-    """Naukri.com — India's #1 private job portal."""
+    """
+    Scrapes Naukri via RSS feeds — bypasses all bot detection.
+    Naukri provides RSS for any keyword/location search.
+    Feed URL format:
+      https://www.naukri.com/rss/jobsearch/it-jobs?src=directSearch&k=<keyword>&l=<location>&...
+    """
     jobs = []
-    try:
-        keywords = os.getenv("JOB_KEYWORDS", "python developer,data analyst,software engineer").split(",")
-        location = os.getenv("JOB_LOCATION", "Bengaluru")
+    keywords = os.getenv("JOB_KEYWORDS", "python developer,data analyst,software engineer").split(",")
+    location  = os.getenv("JOB_LOCATION", "Bengaluru")
 
-        for keyword in keywords[:3]:
-            keyword_slug = keyword.strip().lower().replace(" ", "-")
-            location_slug = location.lower().replace(" ", "-")
-            url = f"https://www.naukri.com/{keyword_slug}-jobs-in-{location_slug}"
+    # Build one RSS feed URL per keyword
+    rss_urls = []
+    for keyword in keywords[:4]:  # max 4 to avoid rate limits
+        kw = keyword.strip().replace(" ", "%20")
+        loc = location.strip().replace(" ", "%20")
+        rss_urls.append(
+            f"https://www.naukri.com/rss/jobsearch/it-jobs"
+            f"?src=directSearch&k={kw}&l={loc}&experience=0&afdlc=0"
+        )
 
+    for url in rss_urls:
+        try:
             res = requests.get(url, headers=HEADERS, timeout=15)
-            soup = BeautifulSoup(res.text, "html.parser")
+            if res.status_code != 200:
+                print(f"[Naukri RSS] HTTP {res.status_code} for {url}")
+                continue
 
-            for card in soup.select("article.jobTuple"):
-                title_tag = card.select_one("a.title")
-                company_tag = card.select_one("a.subTitle")
-                exp_tag = card.select_one("li.experience span.ellipsis")
-                loc_tag = card.select_one("li.location span.ellipsis")
-                date_tag = card.select_one("span.fleft.postedDate")
+            # Parse the RSS/XML
+            root = ET.fromstring(res.content)
+            channel = root.find("channel")
+            if channel is None:
+                continue
 
-                if title_tag:
+            for item in channel.findall("item"):
+                title   = item.findtext("title", "").strip()
+                link    = item.findtext("link", "").strip()
+                company = item.findtext("company", "").strip()
+                pubdate = item.findtext("pubDate", "").strip()
+                loc_tag = item.findtext("location", location).strip()
+                exp_tag = item.findtext("experience", "").strip()
+
+                # Naukri RSS puts company inside description sometimes
+                if not company:
+                    desc = item.findtext("description", "")
+                    # Try to pull company from description text
+                    if "Company:" in desc:
+                        company = desc.split("Company:")[1].split("<")[0].strip()
+
+                if title and link:
                     jobs.append({
-                        "title": title_tag.get_text(strip=True),
-                        "company": company_tag.get_text(strip=True) if company_tag else "N/A",
-                        "location": loc_tag.get_text(strip=True) if loc_tag else location,
-                        "experience": exp_tag.get_text(strip=True) if exp_tag else "N/A",
-                        "link": title_tag.get("href", "https://www.naukri.com"),
-                        "source": "Naukri",
-                        "type": "PRIVATE",
-                        "date": date_tag.get_text(strip=True) if date_tag else datetime.today().strftime("%d %b %Y"),
+                        "title":      title,
+                        "company":    company or "N/A",
+                        "location":   loc_tag,
+                        "experience": exp_tag,
+                        "link":       link,
+                        "source":     "Naukri",
+                        "type":       "PRIVATE",
+                        "date":       pubdate or datetime.today().strftime("%d %b %Y"),
                     })
-            time.sleep(1)
 
-    except Exception as e:
-        print(f"[Naukri] Error: {e}")
+        except ET.ParseError as e:
+            print(f"[Naukri RSS] XML parse error: {e}")
+        except Exception as e:
+            print(f"[Naukri RSS] Error: {e}")
+
+    print(f"[Naukri RSS] Found {len(jobs[:25])} jobs")
+    return jobs[:25]
+
+
+# ── Also fix Indeed — use their RSS feed too ──────────────────────
+
+def scrape_indeed_india():
+    """
+    Indeed India via RSS — much more reliable than HTML scraping.
+    Indeed's RSS: https://in.indeed.com/rss?q=<keyword>&l=<location>
+    """
+    jobs = []
+    keywords = os.getenv("JOB_KEYWORDS", "software developer,data analyst").split(",")
+    location  = os.getenv("JOB_LOCATION", "Bengaluru")
+
+    for keyword in keywords[:3]:
+        kw  = keyword.strip().replace(" ", "+")
+        loc = location.strip().replace(" ", "+")
+        url = f"https://in.indeed.com/rss?q={kw}&l={loc}&sort=date"
+
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=15)
+            if res.status_code != 200:
+                continue
+
+            root = ET.fromstring(res.content)
+            channel = root.find("channel")
+            if channel is None:
+                continue
+
+            for item in channel.findall("item"):
+                title   = item.findtext("title", "").strip()
+                link    = item.findtext("link", "").strip()
+                pubdate = item.findtext("pubDate", "").strip()
+                desc    = item.findtext("description", "")
+
+                # Company name is usually in the title: "Job Title - Company Name"
+                company = "N/A"
+                if " - " in title:
+                    parts   = title.rsplit(" - ", 1)
+                    title   = parts[0].strip()
+                    company = parts[1].strip()
+
+                if title and link:
+                    jobs.append({
+                        "title":    title,
+                        "company":  company,
+                        "location": location,
+                        "link":     link,
+                        "source":   "Indeed India",
+                        "type":     "PRIVATE",
+                        "date":     pubdate or datetime.today().strftime("%d %b %Y"),
+                    })
+
+        except ET.ParseError as e:
+            print(f"[Indeed RSS] XML parse error: {e}")
+        except Exception as e:
+            print(f"[Indeed RSS] Error: {e}")
+
     return jobs[:20]
 
 
-def scrape_indeed_india():
-    """Indeed India — broad coverage across sectors."""
-    jobs = []
-    try:
-        keywords = os.getenv("JOB_KEYWORDS", "software developer,data analyst").split(",")
-        location = os.getenv("JOB_LOCATION", "Bengaluru")
+if __name__ == "__main__":
+    print("Testing Naukri RSS...")
+    jobs = scrape_naukri()
+    print(f"Naukri: {len(jobs)} jobs found")
+    for j in jobs[:3]:
+        print(f"  → {j['title']} @ {j['company']} | {j['location']}")
 
-        for keyword in keywords[:2]:
-            url = (
-                f"https://in.indeed.com/jobs"
-                f"?q={keyword.strip().replace(' ', '+')}"
-                f"&l={location.replace(' ', '+')}"
-            )
-            res = requests.get(url, headers=HEADERS, timeout=15)
-            soup = BeautifulSoup(res.text, "html.parser")
-
-            for card in soup.select("div.job_seen_beacon"):
-                title_tag = card.select_one("h2.jobTitle a")
-                company_tag = card.select_one("span.companyName")
-                loc_tag = card.select_one("div.companyLocation")
-                date_tag = card.select_one("span.date")
-
-                if title_tag:
-                    href = title_tag.get("href", "")
-                    full_link = f"https://in.indeed.com{href}" if href.startswith("/") else href
-                    jobs.append({
-                        "title": title_tag.get_text(strip=True).replace("new", "").strip(),
-                        "company": company_tag.get_text(strip=True) if company_tag else "N/A",
-                        "location": loc_tag.get_text(strip=True) if loc_tag else location,
-                        "link": full_link,
-                        "source": "Indeed India",
-                        "type": "PRIVATE",
-                        "date": date_tag.get_text(strip=True) if date_tag else "N/A",
-                    })
-            time.sleep(1)
-
-    except Exception as e:
-        print(f"[Indeed India] Error: {e}")
-    return jobs[:15]
-
+    print("\nTesting Indeed RSS...")
+    jobs2 = scrape_indeed_india()
+    print(f"Indeed: {len(jobs2)} jobs found")
+    for j in jobs2[:3]:
+        print(f"  → {j['title']} @ {j['company']}")
 
 def scrape_shine():
     """Shine.com — strong in IT, BPO, and management roles."""
