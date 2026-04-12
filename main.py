@@ -10,9 +10,9 @@ import os
 # Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from scrapers.job_scraper import get_all_jobs, get_new_jobs
-from notifiers.telegram_notifier import notify_telegram
-from notifiers.email_notifier import notify_email
+from job_scraper import get_all_jobs, get_new_jobs
+from telegram_notifier import notify_telegram
+from email_notifier import notify_email
 
 
 def main():
