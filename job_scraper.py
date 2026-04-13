@@ -5,7 +5,7 @@ Sources:
            RojgarResult, UPSC, SSC, RRB, IBPS
   PRIVATE → TimesJobs, Freshersworld, Naukri, Indeed India, Shine
 """
-
+import xml.etree.ElementTree as ET
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -13,6 +13,8 @@ import os
 import hashlib
 import time
 from datetime import datetime
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 HEADERS = {
     "User-Agent": (
@@ -52,21 +54,21 @@ def scrape_sarkari_result():
     jobs = []
     try:
         url = "https://www.sarkariresult.com/"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
-        for row in soup.select("table#table1 tr"):
-            cols = row.find_all("td")
-            if len(cols) >= 2:
-                title_tag = cols[0].find("a")
-                if title_tag:
-                    jobs.append({
-                        "title": title_tag.get_text(strip=True),
-                        "company": "Government of India",
-                        "link": title_tag.get("href", url),
-                        "source": "SarkariResult",
-                        "type": "GOVT",
-                        "date": cols[1].get_text(strip=True) if len(cols) > 1 else "N/A",
-                    })
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
+        for item in soup.find_all("item"):
+            title = item.find("title").get_text(strip=True) if item.find("title") else ""
+            link = item.find("link").get_text(strip=True) if item.find("link") else ""
+            company = item.find("company").get_text(strip=True) if item.find("company") else "Government of India"
+            date = item.find("pubDate").get_text(strip=True) if item.find("pubDate") else "N/A"
+            jobs.append({
+                "title": title,
+                "company": company,
+                "link": link,
+                "source": "SarkariResult",
+                "type": "GOVT",
+                "date": date,
+            })
     except Exception as e:
         print(f"[SarkariResult] Error: {e}")
     return jobs[:15]
@@ -76,8 +78,8 @@ def scrape_ncs_portal():
     jobs = []
     try:
         url = "https://www.ncs.gov.in/JobSearch/SearchJobs"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         for card in soup.select(".job-detail-left"):
             title = card.select_one("h4 a")
             company = card.select_one(".comp-name")
@@ -102,8 +104,8 @@ def scrape_employment_news():
     jobs = []
     try:
         url = "https://www.employmentnews.gov.in/NewVer/Pages/JobsinGovernment.aspx"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         for row in soup.select("table tr")[1:]:
             cols = row.find_all("td")
             if len(cols) >= 3:
@@ -126,21 +128,21 @@ def scrape_free_job_alert():
     jobs = []
     try:
         url = "https://www.freejobalert.com/latest-notifications/"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
-        for row in soup.select("table.tablesorter tr")[1:]:
-            cols = row.find_all("td")
-            if len(cols) >= 3:
-                title_tag = cols[0].find("a")
-                if title_tag:
-                    jobs.append({
-                        "title": title_tag.get_text(strip=True)[:120],
-                        "company": cols[1].get_text(strip=True) if len(cols) > 1 else "Govt Organization",
-                        "link": title_tag.get("href", "https://www.freejobalert.com"),
-                        "source": "FreeJobAlert",
-                        "type": "GOVT",
-                        "date": cols[2].get_text(strip=True) if len(cols) > 2 else "N/A",
-                    })
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
+        for row in soup.find_all("item"):
+            title = row.find("title").get_text(strip=True) if row.find("title") else ""
+            link = row.find("link").get_text(strip=True) if row.find("link") else ""
+            company = row.find("company").get_text(strip=True) if row.find("company") else "Govt Organization"
+            date = row.find("pubDate").get_text(strip=True) if row.find("pubDate") else "N/A"
+            jobs.append({
+                "title": title,
+                "company": company,
+                "link": link,
+                "source": "FreeJobAlert",
+                "type": "GOVT",
+                "date": date,
+            })
     except Exception as e:
         print(f"[FreeJobAlert] Error: {e}")
     return jobs[:20]
@@ -151,8 +153,8 @@ def scrape_rojgar_result():
     jobs = []
     try:
         url = "https://rojgarresult.com/latest-jobs/"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         for card in soup.select("div.post-box, article.post, div.entry-title, h2.entry-title"):
             title_tag = card.find("a")
             if title_tag:
@@ -176,8 +178,8 @@ def scrape_upsc():
     jobs = []
     try:
         url = "https://www.upsc.gov.in/recruitments/active-recruitments"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         for row in soup.select("table tr")[1:]:
             cols = row.find_all("td")
             if len(cols) >= 2:
@@ -202,8 +204,8 @@ def scrape_ssc():
     jobs = []
     try:
         url = "https://ssc.nic.in/Portal/LatestNews"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         for link_tag in soup.select("div.whatsnew a, ul.list-group a, div.news-list a, td a")[:20]:
             text = link_tag.get_text(strip=True)
             href = link_tag.get("href", "")
@@ -227,8 +229,8 @@ def scrape_rrb():
     jobs = []
     try:
         url = "https://www.rrbcdg.gov.in/"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         recruitment_keywords = ["recruitment", "vacancy", "notification", "apply", "CEN", "RRB"]
         for link_tag in soup.select("a[href]"):
             text = link_tag.get_text(strip=True)
@@ -253,8 +255,8 @@ def scrape_ibps():
     jobs = []
     try:
         url = "https://www.ibps.in/"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
+        res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        soup = BeautifulSoup(res.content, "html.parser")
         banking_keywords = ["recruitment", "notification", "vacancy", "apply", "CRP"]
         for link_tag in soup.select("div.views-row a, div.view-content a, td a, li a"):
             text = link_tag.get_text(strip=True)
@@ -301,7 +303,7 @@ def scrape_naukri():
 
     for url in rss_urls:
         try:
-            res = requests.get(url, headers=HEADERS, timeout=15)
+            res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
             if res.status_code != 200:
                 print(f"[Naukri RSS] HTTP {res.status_code} for {url}")
                 continue
@@ -348,64 +350,6 @@ def scrape_naukri():
     return jobs[:25]
 
 
-# ── Also fix Indeed — use their RSS feed too ──────────────────────
-
-def scrape_indeed_india():
-    """
-    Indeed India via RSS — much more reliable than HTML scraping.
-    Indeed's RSS: https://in.indeed.com/rss?q=<keyword>&l=<location>
-    """
-    jobs = []
-    keywords = os.getenv("JOB_KEYWORDS", "software developer,data analyst").split(",")
-    location  = os.getenv("JOB_LOCATION", "Bengaluru")
-
-    for keyword in keywords[:3]:
-        kw  = keyword.strip().replace(" ", "+")
-        loc = location.strip().replace(" ", "+")
-        url = f"https://in.indeed.com/rss?q={kw}&l={loc}&sort=date"
-
-        try:
-            res = requests.get(url, headers=HEADERS, timeout=15)
-            if res.status_code != 200:
-                continue
-
-            root = ET.fromstring(res.content)
-            channel = root.find("channel")
-            if channel is None:
-                continue
-
-            for item in channel.findall("item"):
-                title   = item.findtext("title", "").strip()
-                link    = item.findtext("link", "").strip()
-                pubdate = item.findtext("pubDate", "").strip()
-                desc    = item.findtext("description", "")
-
-                # Company name is usually in the title: "Job Title - Company Name"
-                company = "N/A"
-                if " - " in title:
-                    parts   = title.rsplit(" - ", 1)
-                    title   = parts[0].strip()
-                    company = parts[1].strip()
-
-                if title and link:
-                    jobs.append({
-                        "title":    title,
-                        "company":  company,
-                        "location": location,
-                        "link":     link,
-                        "source":   "Indeed India",
-                        "type":     "PRIVATE",
-                        "date":     pubdate or datetime.today().strftime("%d %b %Y"),
-                    })
-
-        except ET.ParseError as e:
-            print(f"[Indeed RSS] XML parse error: {e}")
-        except Exception as e:
-            print(f"[Indeed RSS] Error: {e}")
-
-    return jobs[:20]
-
-
 if __name__ == "__main__":
     print("Testing Naukri RSS...")
     jobs = scrape_naukri()
@@ -413,11 +357,6 @@ if __name__ == "__main__":
     for j in jobs[:3]:
         print(f"  → {j['title']} @ {j['company']} | {j['location']}")
 
-    print("\nTesting Indeed RSS...")
-    jobs2 = scrape_indeed_india()
-    print(f"Indeed: {len(jobs2)} jobs found")
-    for j in jobs2[:3]:
-        print(f"  → {j['title']} @ {j['company']}")
 
 def scrape_shine():
     """Shine.com — strong in IT, BPO, and management roles."""
@@ -432,14 +371,16 @@ def scrape_shine():
                 f"{keyword.strip().lower().replace(' ', '-')}-jobs-in-"
                 f"{location.lower().replace(' ', '-')}"
             )
-            res = requests.get(url, headers=HEADERS, timeout=15)
+            res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
             soup = BeautifulSoup(res.text, "html.parser")
 
-            for card in soup.select("div.jobCard"):
-                title_tag = card.select_one("h3 a")
-                company_tag = card.select_one("span.company-name")
-                loc_tag = card.select_one("span.location")
-                exp_tag = card.select_one("span.experience")
+            for card in soup.select("div[data-card-index]"):
+
+                # For child elements, use partial class match:
+                title_tag = card.select_one("a[class*='jobCardNova']")
+                company_tag = card.select_one("[class*='companyName']")  # inspect to confirm
+                loc_tag = card.select_one("[class*='bigCardLocation']")
+                exp_tag = card.select_one("[class*='bigCardExperience']")
 
                 if title_tag:
                     href = title_tag.get("href", "")
@@ -468,7 +409,7 @@ def scrape_timesjobs():
 
         for keyword in keywords[:3]:
             url = f"https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&txtKeywords={keyword.strip()}&txtLocation={location}"
-            res = requests.get(url, headers=HEADERS, timeout=15)
+            res = requests.get(url, headers=HEADERS, timeout=15, verify=False)
             soup = BeautifulSoup(res.text, "html.parser")
 
             for card in soup.select("li.clearfix.job-bx"):
@@ -492,31 +433,6 @@ def scrape_timesjobs():
     return jobs[:20]
 
 
-def scrape_freshersworld():
-    jobs = []
-    try:
-        url = "https://www.freshersworld.com/jobs/freshers"
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        for card in soup.select(".job-container"):
-            title = card.select_one("h3 a")
-            company = card.select_one(".company-name")
-            location = card.select_one(".location")
-
-            if title:
-                jobs.append({
-                    "title": title.get_text(strip=True),
-                    "company": company.get_text(strip=True) if company else "N/A",
-                    "location": location.get_text(strip=True) if location else "India",
-                    "link": "https://www.freshersworld.com" + title.get("href", ""),
-                    "source": "Freshersworld",
-                    "type": "PRIVATE",
-                    "date": datetime.today().strftime("%d %b %Y"),
-                })
-    except Exception as e:
-        print(f"[Freshersworld] Error: {e}")
-    return jobs[:15]
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -540,11 +456,10 @@ def get_all_jobs():
         ("IBPS Banking",        scrape_ibps),
         # ── PRIVATE ───────────────────────────────────────
         ("Naukri",              scrape_naukri),
-        ("Indeed India",        scrape_indeed_india),
         ("Shine",               scrape_shine),
         ("TimesJobs",           scrape_timesjobs),
-        ("Freshersworld",       scrape_freshersworld),
-    ]
+        ("LinkedIn",            scrape_linkedin)
+        ]
 
     for name, scraper in scrapers:
         print(f"  ↳ {name}...", end=" ", flush=True)
@@ -577,3 +492,50 @@ if __name__ == "__main__":
     govt = [j for j in new if j.get("type") == "GOVT"]
     pvt  = [j for j in new if j.get("type") == "PRIVATE"]
     print(f"   🏛️  Govt: {len(govt)}  |  🏢 Private: {len(pvt)}")
+
+def scrape_linkedin():
+    """LinkedIn Jobs — public job listings (no login required)."""
+    jobs = []
+    keywords = os.getenv("JOB_KEYWORDS", "software developer,data analyst").split(",")
+    location = os.getenv("JOB_LOCATION", "Bengaluru")
+
+    for keyword in keywords[:3]:
+        kw = keyword.strip().replace(" ", "%20")
+        loc = location.strip().replace(" ", "%20")
+        url = (
+            f"https://www.linkedin.com/jobs/search/"
+            f"?keywords={kw}&location={loc}&f_TPR=r86400&position=1&pageNum=0"
+        )
+        # f_TPR=r86400 = last 24 hours
+
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=15)
+            if res.status_code != 200:
+                print(f"[LinkedIn] HTTP {res.status_code}")
+                continue
+
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            for card in soup.select("div.base-card"):
+                title_tag = card.select_one("h3.base-search-card__title")
+                company_tag = card.select_one("h4.base-search-card__subtitle a")
+                location_tag = card.select_one("span.job-search-card__location")
+                link_tag = card.select_one("a.base-card__full-link")
+                date_tag = card.select_one("time")
+
+                if title_tag:
+                    jobs.append({
+                        "title": title_tag.get_text(strip=True),
+                        "company": company_tag.get_text(strip=True) if company_tag else "N/A",
+                        "location": location_tag.get_text(strip=True) if location_tag else location,
+                        "link": link_tag.get("href", "").split("?")[0] if link_tag else url,
+                        "source": "LinkedIn",
+                        "type": "PRIVATE",
+                        "date": date_tag.get("datetime", "")[:10] if date_tag else datetime.today().strftime("%d %b %Y"),
+                    })
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"[LinkedIn] Error: {e}")
+
+    return jobs[:25]

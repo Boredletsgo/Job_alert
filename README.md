@@ -6,46 +6,78 @@ Automatically scrapes **Govt + Private job listings** daily and sends you alerts
 
 ## 📡 Sources Scraped
 
-| Source | Type | Notes |
-|---|---|---|
-| [SarkariResult.com](https://sarkariresult.com) | 🏛️ Govt | Most popular govt job aggregator in India |
-| [NCS Portal](https://ncs.gov.in) | 🏛️ Govt | Official Govt of India job portal |
-| [Employment News](https://employmentnews.gov.in) | 🏛️ Govt | Official GOI weekly job paper |
-| [TimesJobs](https://timesjobs.com) | 🏢 Private | IT and corporate jobs |
-| [Freshersworld](https://freshersworld.com) | 🏢 Private | Entry-level and fresher jobs |
+### 🏛️ Government
+
+| Source | Notes |
+|---|---|
+| [SarkariResult](https://sarkariresult.com) | Most popular govt job aggregator in India |
+| [NCS Portal](https://ncs.gov.in) | Official Govt of India job portal |
+| [Employment News](https://employmentnews.gov.in) | Official GOI weekly job paper |
+| [FreeJobAlert](https://freejobalert.com) | Updated multiple times daily, very comprehensive |
+| [RojgarResult](https://rojgarresult.com) | Strong coverage of state-level jobs (UP, Bihar, MP, Rajasthan) |
+| [UPSC](https://upsc.gov.in) | Union Public Service Commission — active recruitments |
+| [SSC](https://ssc.nic.in) | Staff Selection Commission — latest notifications |
+| [RRB](https://rrbcdg.gov.in) | Railway Recruitment Board — one of India's largest employers |
+| [IBPS](https://ibps.in) | Banking jobs — PO, Clerk, SO, RRB |
+
+### 🏢 Private / IT
+
+| Source | Notes |
+|---|---|
+| [LinkedIn](https://linkedin.com/jobs) | Public job listings — largest professional network |
+| [Naukri](https://naukri.com) | India's #1 job portal (via RSS feeds) |
+| [Shine](https://shine.com) | IT, BPO, and management roles |
+| [TimesJobs](https://timesjobs.com) | IT and corporate jobs |
 
 ---
 
-## 🚀 Setup Guide (Step-by-Step)
+## ⚙️ How It Works
 
-### Step 1 — Fork / Create GitHub Repo
+```
+1. Scrape all sources (Govt + Private)
+2. Compare against seen_jobs.json → filter only NEW jobs
+3. Send alerts via Telegram + Gmail
+4. Save seen jobs to avoid duplicates next run
+```
 
-1. Go to [github.com](https://github.com) → **New Repository**
-2. Name it `job-alert-agent`
-3. Upload all files from this project into the repo
-4. Make sure the folder structure matches exactly
+Runs automatically every day at **8:00 AM IST** via GitHub Actions, or trigger it manually anytime.
 
-### Step 2 — Set Up Telegram Bot (Free)
+---
+
+## 🚀 Setup Guide
+
+### Step 1 — Fork / Clone This Repo
+
+```bash
+git clone https://github.com/Boredletsgo/Job_alert.git
+cd Job_alert
+```
+
+### Step 2 — Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3 — Set Up Telegram Bot (Free)
 
 1. Open Telegram → Search **@BotFather**
 2. Send `/newbot` → give it a name like "My Job Alert Bot"
 3. BotFather gives you a **TOKEN** like `123456:ABCdef...` → save it
-4. Now open your bot in Telegram, send `/start`
+4. Open your bot in Telegram, send `/start`
 5. Go to: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
 6. Find `"chat":{"id": 123456789}` → that's your **CHAT_ID**
 
-### Step 3 — Set Up Gmail App Password (Free)
+### Step 4 — Set Up Gmail App Password (Free)
 
 1. Go to your Google Account → **Security**
 2. Enable **2-Step Verification** if not already done
 3. Search **"App passwords"** → Create one for "Mail"
 4. Save the **16-character password** shown (e.g., `abcd efgh ijkl mnop`)
 
-### Step 4 — Add GitHub Secrets
+### Step 5 — Add GitHub Secrets
 
 In your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**
-
-Add these secrets:
 
 | Secret Name | Value |
 |---|---|
@@ -53,9 +85,9 @@ Add these secrets:
 | `TELEGRAM_CHAT_ID` | Your Telegram chat ID |
 | `GMAIL_USER` | your.email@gmail.com |
 | `GMAIL_APP_PASSWORD` | 16-char Gmail app password |
-| `ALERT_EMAIL` | Email to receive alerts (can be same) |
+| `ALERT_EMAIL` | Email to receive alerts (can be same as GMAIL_USER) |
 
-### Step 5 — Customize Job Search (Optional)
+### Step 6 — Customize Job Search (Optional)
 
 In **Settings → Variables → New repository variable**:
 
@@ -64,37 +96,64 @@ In **Settings → Variables → New repository variable**:
 | `JOB_KEYWORDS` | `software developer,data analyst,python developer` | `civil engineer,SSC,UPSC` |
 | `JOB_LOCATION` | `Bengaluru` | `Delhi,Mumbai` |
 
-### Step 6 — Enable GitHub Actions
+### Step 7 — Run It
 
-1. Go to **Actions tab** in your repo
-2. Click **"I understand my workflows, go ahead and enable them"**
-3. The agent runs **daily at 8:00 AM IST** automatically!
+**Locally:**
+```bash
+python main.py
+```
 
-### Step 7 — Test It Now
+**Via GitHub Actions:**
+1. Go to **Actions tab** → **Job Alert Agent** → **Run workflow**
+2. Check your Telegram and Email within 2 minutes!
 
-1. Go to **Actions → Job Alert Agent → Run workflow**
-2. Click **Run workflow** button
-3. Check your Telegram and Email within 2 minutes!
+The workflow also runs **automatically every day at 8:00 AM IST**.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-job-alert-agent/
-├── .github/
-│   └── workflows/
-│       └── job_alert.yml      ← GitHub Actions (runs daily)
-├── scrapers/
-│   └── job_scraper.py         ← All website scrapers
-├── notifiers/
-│   ├── telegram_notifier.py   ← Telegram alerts
-│   └── email_notifier.py      ← Gmail alerts
+Job_alert/
+├── job_alert.yml              ← GitHub Actions workflow (runs daily)
+├── job_scraper.py             ← All website scrapers (Govt + Private)
+├── telegram_notifier.py       ← Telegram Bot alerts
+├── email_notifier.py          ← Gmail SMTP alerts
 ├── main.py                    ← Entry point
-├── seen_jobs.json             ← Tracks seen jobs (auto-created)
-├── requirements.txt
+├── seen_jobs.json             ← Tracks already-seen jobs (auto-managed)
+├── requirements.txt           ← Python dependencies
 └── README.md
 ```
+
+---
+
+## 🛠️ Tech Stack
+
+- **Python 3.11+** — core language
+- **BeautifulSoup4** — HTML parsing for web scraping
+- **Requests** — HTTP client
+- **xml.etree.ElementTree** — RSS/XML feed parsing (Naukri)
+- **GitHub Actions** — free daily scheduling (cron)
+- **Telegram Bot API** — instant mobile notifications
+- **Gmail SMTP** — email alerts with HTML formatting
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Cause | Fix |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'bs4'` | Dependencies not installed | Run `pip install -r requirements.txt` |
+| `TELEGRAM_BOT_TOKEN not set` | Env vars missing locally | Set secrets in GitHub Actions; locally this is expected |
+| `SSL: CERTIFICATE_VERIFY_FAILED` | Corporate proxy intercepting HTTPS | Add `verify=False` to `requests.get()` calls |
+| `XML parse error` (Naukri) | RSS feed format changed | Switch XML parsing to BeautifulSoup |
+| A scraper returns 0 jobs | Website HTML structure changed | Inspect the site and update CSS selectors |
+
+---
+
+## 📜 License
+
+This is a personal learning project. Feel free to fork and customize!
 
 ---
 
