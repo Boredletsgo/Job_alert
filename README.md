@@ -1,235 +1,132 @@
-# 🤖 Job Alert Agent
+# 🚀 Job Alert Agent
 
-Automatically scrapes **Govt + Private job listings** daily and sends you alerts via **Telegram** and **Gmail** — 100% free using GitHub Actions.
+A fully automated job intelligence system that continuously monitors multiple government and private job portals, filters relevant opportunities, and delivers real-time alerts directly to your Telegram and email — all without requiring any server or paid infrastructure.
 
----
-
-## 📡 Sources Scraped
-
-### 🏛️ Government
-
-| Source | Notes |
-|---|---|
-| [SarkariResult](https://sarkariresult.com) | Most popular govt job aggregator in India |
-| [NCS Portal](https://ncs.gov.in) | Official Govt of India job portal |
-| [Employment News](https://employmentnews.gov.in) | Official GOI weekly job paper |
-| [FreeJobAlert](https://freejobalert.com) | Updated multiple times daily, very comprehensive |
-| [RojgarResult](https://rojgarresult.com) | Strong coverage of state-level jobs (UP, Bihar, MP, Rajasthan) |
-| [UPSC](https://upsc.gov.in) | Union Public Service Commission — active recruitments |
-| [SSC](https://ssc.nic.in) | Staff Selection Commission — latest notifications |
-| [RRB](https://rrbcdg.gov.in) | Railway Recruitment Board — one of India's largest employers |
-| [IBPS](https://ibps.in) | Banking jobs — PO, Clerk, SO, RRB |
-
-### 🏢 Private / IT
-
-| Source | Notes |
-|---|---|
-| [LinkedIn](https://linkedin.com/jobs) | Public job listings — largest professional network |
-| [Naukri](https://naukri.com) | India's #1 job portal (via RSS feeds) |
-| [Shine](https://shine.com) | IT, BPO, and management roles |
-| [TimesJobs](https://timesjobs.com) | IT and corporate jobs |
+Built with a focus on automation, modularity, and zero-cost deployment, this system runs entirely on GitHub Actions and operates as a daily job pipeline.
 
 ---
 
-## ⚙️ How It Works
+## Overview
 
-```
-1. Scrape all sources (Govt + Private)
-2. Compare against seen_jobs.json → filter only NEW jobs
-3. Send alerts via Telegram + Gmail
-4. Save seen jobs to avoid duplicates next run
-```
+Searching for jobs across multiple platforms is repetitive, time-consuming, and inefficient. Important opportunities are often missed simply because they are scattered across different websites.
 
-Runs automatically every day at **8:00 AM IST** via GitHub Actions, or trigger it manually anytime.
+Job Alert Agent solves this by acting as a centralized monitoring system. It aggregates job listings from multiple trusted sources, processes and filters them, and ensures that only new and relevant opportunities are delivered to the user automatically.
+
+Once configured, the system runs independently — no manual intervention required.
 
 ---
 
-## 🚀 Setup Guide
+## How It Works
 
-### Step 1 — Fork / Clone This Repo
+At its core, the system follows a simple but effective pipeline:
 
-```bash
-git clone https://github.com/Boredletsgo/Job_alert.git
-cd Job_alert
-```
+Job sources are scraped → data is processed and filtered → duplicates are removed → previously seen jobs are tracked → alerts are sent to the user.
 
-### Step 2 — Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Step 3 — Set Up Telegram Bot (Free)
-
-1. Open Telegram → Search **@BotFather**
-2. Send `/newbot` → give it a name like "My Job Alert Bot"
-3. BotFather gives you a **TOKEN** like `123456:ABCdef...` → save it
-4. Open your bot in Telegram, send `/start`
-5. Go to: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
-6. Find `"chat":{"id": 123456789}` → that's your **CHAT_ID**
-
-### Step 4 — Set Up Gmail App Password (Free)
-
-1. Go to your Google Account → **Security**
-2. Enable **2-Step Verification** if not already done
-3. Search **"App passwords"** → Create one for "Mail"
-4. Save the **16-character password** shown (e.g., `abcd efgh ijkl mnop`)
-
-### Step 5 — Add GitHub Secrets
-
-In your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret Name | Value |
-|---|---|
-| `TELEGRAM_BOT_TOKEN` | Your Telegram bot token |
-| `TELEGRAM_CHAT_ID` | Your Telegram chat ID |
-| `GMAIL_USER` | your.email@gmail.com |
-| `GMAIL_APP_PASSWORD` | 16-char Gmail app password |
-| `ALERT_EMAIL` | Email to receive alerts (can be same as GMAIL_USER) |
-
-### Step 6 — Customize Job Search (Optional)
-
-In **Settings → Variables → New repository variable**:
-
-| Variable | Default | Example |
-|---|---|---|
-| `JOB_KEYWORDS` | `software developer,data analyst,python developer` | `civil engineer,SSC,UPSC` |
-| `JOB_LOCATION` | `Bengaluru` | `Delhi,Mumbai` |
-
-### Step 7 — Run It
-
-**Locally:**
-```bash
-python main.py
-```
-
-**Via GitHub Actions:**
-1. Go to **Actions tab** → **Job Alert Agent** → **Run workflow**
-2. Check your Telegram and Email within 2 minutes!
-
-The workflow also runs **automatically every day at 8:00 AM IST**.
+The entire workflow is executed on a scheduled basis using GitHub Actions, making it completely serverless and maintenance-free.
 
 ---
 
-## 📁 Project Structure
+## Key Capabilities
 
-```
-Job_alert/
-├── job_alert.yml              ← GitHub Actions workflow (runs daily)
-├── job_scraper.py             ← All website scrapers (Govt + Private)
-├── telegram_notifier.py       ← Telegram Bot alerts
-├── email_notifier.py          ← Gmail SMTP alerts
-├── main.py                    ← Entry point
-├── seen_jobs.json             ← Tracks already-seen jobs (auto-managed)
-├── requirements.txt           ← Python dependencies
-└── README.md
-```
+The system is designed to behave like a lightweight production pipeline rather than a standalone script.
+
+It supports aggregation from multiple job sources, including both government and private platforms, ensuring broader coverage of opportunities. A deduplication mechanism prevents repeated alerts by tracking previously seen jobs, while a keyword-based filtering system allows basic personalization.
+
+Notifications are delivered through both Telegram and Gmail, providing flexibility in how updates are consumed. Since the entire workflow runs on GitHub Actions, there is no need for hosting, making the system cost-efficient and easy to scale.
 
 ---
 
-## 🛠️ Tech Stack
+## Data Sources
 
-- **Python 3.11+** — core language
-- **BeautifulSoup4** — HTML parsing for web scraping
-- **Requests** — HTTP client
-- **xml.etree.ElementTree** — RSS/XML feed parsing (Naukri)
-- **GitHub Actions** — free daily scheduling (cron)
-- **Telegram Bot API** — instant mobile notifications
-- **Gmail SMTP** — email alerts with HTML formatting
+The agent currently monitors a mix of official and high-traffic job platforms:
 
----
+- Sarkari Result (Government job aggregator)  
+- National Career Service (Government of India portal)  
+- Employment News (official weekly publication)  
+- TimesJobs (corporate and IT roles)  
+- Freshersworld (entry-level opportunities)  
 
-## 🐛 Troubleshooting
-
-| Issue | Cause | Fix |
-|---|---|---|
-| `ModuleNotFoundError: No module named 'bs4'` | Dependencies not installed | Run `pip install -r requirements.txt` |
-| `TELEGRAM_BOT_TOKEN not set` | Env vars missing locally | Set secrets in GitHub Actions; locally this is expected |
-| `SSL: CERTIFICATE_VERIFY_FAILED` | Corporate proxy intercepting HTTPS | Add `verify=False` to `requests.get()` calls |
-| `XML parse error` (Naukri) | RSS feed format changed | Switch XML parsing to BeautifulSoup |
-| A scraper returns 0 jobs | Website HTML structure changed | Inspect the site and update CSS selectors |
+The architecture is extensible, allowing additional sources to be integrated with minimal changes.
 
 ---
 
-## 📜 License
+## Setup 
 
-This is a personal learning project. Feel free to fork and customize!
-
----
-
-## ⏰ Schedule
-
-The agent runs at **8:00 AM IST** every day. To change this, edit the cron in `.github/workflows/job_alert.yml`:
-
-```yaml
-- cron: "30 2 * * *"   # 2:30 AM UTC = 8:00 AM IST
-```
-
-Use [crontab.guru](https://crontab.guru) to create custom schedules.
-
----
-
-## 🆓 Cost Breakdown
-
-| Service | Cost |
-|---|---|
-| GitHub Actions | Free (2000 min/month free) |
-| Telegram Bot | Free |
-| Gmail SMTP | Free |
-| Hosting | None needed |
-| **Total** | **₹0 / month** |
-
----
-
-## 🔧 Adding More Sources
-
-To add a new job source, add a function in `scrapers/job_scraper.py`:
-
-```python
-def scrape_my_source():
-    jobs = []
-    # ... scrape logic ...
-    return jobs
-```
-
-Then add it to the `scrapers` list in `get_all_jobs()`.
-
----
-
-## 📬 Sample Alert (Telegram)
-
-```
-🚨 Job Alert — 23 New Jobs Found!
-🏛️ Govt: 15 | 🏢 Private: 8
-──────────────────────────────
-
-🏛️ GOVERNMENT JOBS
-
-📌 SSC CGL 2024
-   🏢 Staff Selection Commission
-   📅 15 Jan 2025
-   🌐 Apply Here
-
-📌 IBPS PO 2024
-   🏢 Institute of Banking Personnel
-   📅 20 Jan 2025
-   🌐 Apply Here
-```
-
----
-
-## 🛠️ Run Locally
+Clone the repository and install the required dependencies:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/job-alert-agent
 cd job-alert-agent
 pip install -r requirements.txt
 
-# Set environment variables
-export TELEGRAM_BOT_TOKEN="your_token"
-export TELEGRAM_CHAT_ID="your_chat_id"
-export GMAIL_USER="your@gmail.com"
-export GMAIL_APP_PASSWORD="your_app_password"
 
+##  Configure the required environment variables:
+
+TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_CHAT_ID=your_chat_id
+GMAIL_USER=your_email@gmail.com
+GMAIL_APP_PASSWORD=your_app_password
+ALERT_EMAIL=recipient_email
+
+##   Run the project locally:
 python main.py
-```
+
+
+## Automation
+
+The system is designed to run automatically using GitHub Actions.
+By default, it executes once every day at 8:00 AM IST using a cron schedule. This can be modified in the workflow configuration file depending on your preference.
+This approach eliminates the need for dedicated servers, background processes, or manual execution.
+
+##  Project Structure
+
+The codebase follows a modular design to separate responsibilities clearly:
+
+- scrapers/ handles data collection from different sources
+- notifiers/ manages Telegram and email alerts
+- main.py orchestrates the workflow
+- seen_jobs.json maintains state for deduplication
+- .github/workflows/ defines the automation pipeline
+
+This structure makes the system easy to extend, maintain, and scale.
+
+
+##  Extending the System
+
+New job sources can be added by implementing a scraper function and integrating it into the aggregation pipeline.
+The modular design also allows additional notification channels or filtering strategies to be introduced without affecting the core workflow.
+
+##  Engineering Notes
+
+The system is designed with practical constraints in mind. It uses a persistent JSON-based approach to track previously seen jobs, ensuring idempotent execution across runs.
+Since it relies on web scraping, it is inherently dependent on the structure of external websites, which may require periodic updates. Additionally, the current filtering mechanism is keyword-based and can be further enhanced for better personalization.
+
+##   Future Direction
+
+- This project is intentionally designed to be extensible toward more intelligent features.
+
+- Planned improvements include integrating NLP-based job matching, personalized recommendation systems, skill gap analysis, and LLM-based summarization of job descriptions.
+
+- These additions would transform the system from a rule-based alerting tool into a more adaptive and intelligent job discovery platform.
+
+##  Cost
+
+The system is completely free to run:
+
+- GitHub Actions (within free usage limits)
+- Telegram Bot API
+- Gmail SMTP
+
+No hosting or paid services are required.
+
+##   Summary
+
+Job Alert Agent demonstrates how a simple idea can be turned into a practical, automated system using clean architecture and serverless tools.
+
+It reflects an approach focused not just on writing code, but on building reliable, extensible, and real-world usable systems.
+
+Author
+
+Built by Mahima Sahu
+
+If you found this useful, consider starring the repository.
