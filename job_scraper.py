@@ -458,7 +458,10 @@ def get_all_jobs():
         ("Naukri",              scrape_naukri),
         ("Shine",               scrape_shine),
         ("TimesJobs",           scrape_timesjobs),
-        ("LinkedIn",            scrape_linkedin)
+        ("LinkedIn",            scrape_linkedin),
+        ("Internshala",         scrape_internshala),
+        ("RemoteOK",            scrape_remoteok),
+        ("Wellfound",           scrape_wellfound),
         ]
 
     for name, scraper in scrapers:
@@ -539,3 +542,124 @@ def scrape_linkedin():
             print(f"[LinkedIn] Error: {e}")
 
     return jobs[:25]
+
+
+def scrape_internshala():
+    """Internshala — internships + fresher jobs, clean HTML structure."""
+    jobs = []
+    keywords = os.getenv("JOB_KEYWORDS", "software developer,data analyst").split(",")
+
+    for keyword in keywords[:3]:
+        kw = keyword.strip().replace(" ", "-").lower()
+        url = f"https://internshala.com/jobs/{kw}-jobs"
+
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=15)
+            if res.status_code != 200:
+                print(f"[Internshala] HTTP {res.status_code}")
+                continue
+
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            for card in soup.select("div.individual_internship, div.job-internship-listing"):
+                title_tag = card.select_one("h3 a, a.job-title-href")
+                company_tag = card.select_one("p.company-name, a.company-name")
+                location_tag = card.select_one("p.location_link a, span.location_link")
+                stipend_tag = card.select_one("span.desktop-text, span.stipend")
+
+                if title_tag:
+                    href = title_tag.get("href", "")
+                    jobs.append({
+                        "title": title_tag.get_text(strip=True),
+                        "company": company_tag.get_text(strip=True) if company_tag else "N/A",
+                        "location": location_tag.get_text(strip=True) if location_tag else "India",
+                        "link": f"https://internshala.com{href}" if href.startswith("/") else href,
+                        "source": "Internshala",
+                        "type": "PRIVATE",
+                        "date": datetime.today().strftime("%d %b %Y"),
+                    })
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"[Internshala] Error: {e}")
+
+    return jobs[:20]
+
+
+def scrape_remoteok():
+    """RemoteOK — remote tech jobs with a public JSON API."""
+    jobs = []
+    try:
+        url = "https://remoteok.com/api"
+        res = requests.get(url, headers=HEADERS, timeout=15)
+        if res.status_code != 200:
+            print(f"[RemoteOK] HTTP {res.status_code}")
+            return jobs
+
+        data = res.json()
+
+        # First item is metadata, skip it
+        for item in data[1:]:
+            title = item.get("position", "").strip()
+            company = item.get("company", "").strip()
+            link = item.get("url", "").strip()
+            date = item.get("date", "")[:10]
+            tags = ", ".join(item.get("tags", []))
+
+            if title and link:
+                jobs.append({
+                    "title": title,
+                    "company": company or "N/A",
+                    "location": "Remote",
+                    "skills": tags,
+                    "link": link,
+                    "source": "RemoteOK",
+                    "type": "PRIVATE",
+                    "date": date or datetime.today().strftime("%d %b %Y"),
+                })
+
+    except Exception as e:
+        print(f"[RemoteOK] Error: {e}")
+
+    return jobs[:25]
+
+
+def scrape_wellfound():
+    """Wellfound (AngelList) — startup jobs, public listings."""
+    jobs = []
+    keywords = os.getenv("JOB_KEYWORDS", "software developer").split(",")
+
+    for keyword in keywords[:2]:
+        kw = keyword.strip().replace(" ", "-").lower()
+        url = f"https://wellfound.com/role/r/{kw}"
+
+        try:
+            res = requests.get(url, headers=HEADERS, timeout=15)
+            if res.status_code != 200:
+                print(f"[Wellfound] HTTP {res.status_code}")
+                continue
+
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            for card in soup.select("div.styles_jobListing____, div[data-test='StartupResult']"):
+                title_tag = card.select_one("a[class*='jobTitle'], h4 a, a[data-test='job-link']")
+                company_tag = card.select_one("a[class*='company'], h2 a, a[data-test='startup-link']")
+                location_tag = card.select_one("span[class*='location']")
+
+                if title_tag:
+                    href = title_tag.get("href", "")
+                    jobs.append({
+                        "title": title_tag.get_text(strip=True),
+                        "company": company_tag.get_text(strip=True) if company_tag else "N/A",
+                        "location": location_tag.get_text(strip=True) if location_tag else "Remote / India",
+                        "link": f"https://wellfound.com{href}" if href.startswith("/") else href,
+                        "source": "Wellfound",
+                        "type": "PRIVATE",
+                        "date": datetime.today().strftime("%d %b %Y"),
+                    })
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"[Wellfound] Error: {e}")
+
+    return jobs[:20]
